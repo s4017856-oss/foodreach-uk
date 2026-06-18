@@ -8,7 +8,7 @@ import math
 st.set_page_config(page_title="Find Food Bank", page_icon="🔍", layout="wide")
 
 st.title("🔍 Find Food Banks Near You")
-st.write("Enter your postcode to see every food bank nearby.")
+st.write("Enter your postcode or use your current location to see every food bank nearby.")
 
 def haversine(lat1, lng1, lat2, lng2):
     R = 3958.8
@@ -83,8 +83,7 @@ st.components.v1.html("""
                         .then(data => {
                             if (data.result && data.result.length > 0) {
                                 var pc = data.result[0].postcode;
-                                document.getElementById("status").innerText = "✅ Found: " + pc + " — Loading...";
-                                window.parent.location.href = window.parent.location.pathname + "?pc=" + encodeURIComponent(pc);
+                                document.getElementById("status").innerHTML = "✅ Your postcode is <strong>" + pc + "</strong> — <a href='?pc=" + encodeURIComponent(pc) + "' target='_parent' style='color:green;font-weight:bold;'>Click here to search</a>";
                             }
                         });
                 },
@@ -176,4 +175,4 @@ if postcode:
         else:
             st.warning("No food banks found. Try increasing the search radius.")
     else:
-        st.error("❌ Postcode not found. Please check and try again.")  
+        st.error("❌ Postcode not found. Please check and try again.")
