@@ -44,8 +44,8 @@ with st.spinner("Loading food bank data..."):
 
 # Check if postcode came from location button
 params = st.query_params
-if "pc" in params and not st.session_state.get("user_postcode"):
-    st.session_state["user_postcode"] = params["pc"]
+if "pc" in params:
+    st.session_state["user_postcode"] = params["pc"].replace(" ", "")
 
 col1, col2 = st.columns([3, 1])
 with col1:
