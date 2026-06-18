@@ -83,7 +83,8 @@ st.components.v1.html("""
                         .then(data => {
                             if (data.result && data.result.length > 0) {
                                 var pc = data.result[0].postcode;
-                                document.getElementById("status").innerHTML = "✅ Your postcode is <strong>" + pc + "</strong> — <a href='?pc=" + encodeURIComponent(pc) + "' target='_parent' style='color:green;font-weight:bold;'>Click here to search</a>";
+                                document.getElementById("status").innerHTML = "✅ Your postcode is <strong>" + pc + "</strong>";
+                                window.top.location.href = window.top.location.href.split('?')[0] + "?pc=" + encodeURIComponent(pc);
                             }
                         });
                 },
