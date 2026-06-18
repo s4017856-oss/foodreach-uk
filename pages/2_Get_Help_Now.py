@@ -4,6 +4,24 @@ from datetime import datetime
 import random
 import string
 
+from supabase import create_client
+
+def save_voucher(voucher):
+    supabase = create_client(
+        st.secrets["SUPABASE_URL"],
+        st.secrets["SUPABASE_KEY"]
+    )
+    supabase.table("vouchers").insert({
+        "voucher_id": voucher["voucher_id"],
+        "postcode": voucher["postcode"],
+        "adults": voucher["adults"],
+        "children": voucher["children"],
+        "dietary": ", ".join(voucher["dietary"]),
+        "issued_at": voucher["issued_at"],
+        "valid_days": voucher["valid_days"],
+        "total_people": voucher["total_people"]
+    }).execute()
+
 st.set_page_config(page_title="Get Help Now", page_icon="📝", layout="wide")
 
 st.title("📝 Get Help Now")
@@ -109,6 +127,7 @@ if submitted:
             "issued_at": datetime.now().strftime("%d %b %Y, %H:%M"),
             "valid_days": 7
         }
+        save_voucher(st.session_state["voucher"])
 
         st.success("✅ Your voucher is ready!")
         st.balloons()
