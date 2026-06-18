@@ -55,41 +55,52 @@ with col1:
 with col2:
     radius = st.selectbox("Search radius (miles)", [5, 10, 15, 20], index=1)
 
-# Location button — shows postcode then user clicks a proper form button
-st.markdown("**Or:**")
+# Use lat/lng from URL if present
+if "lat" in params and "lng" in params:
+    try:
+        lat_param = float(params["lat"])
+        lng_param = float(params["lng"])
+        geo2 = requests.get(f"https://api.postcodes.io/postcodes?lon={lng_param}&lat={lat_param}").json()
+        if geo2["status"] == 200 and geo2["result"]:
+            detected_pc = geo2["result"][0]["postcode"].replace(" ", "")
+            st.session_state["user_postcode"] = detected_pc
+            st.query_params["pc"] = detected_pc
+            postcode = detected_pc
+    except:
+        pass
 
-loc_result = st.components.v1.html("""
-<button onclick="getLocation()" style="background-color:#4CAF50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:16px;">
-    📍 Use My Current Location
-</button>
-<div id="result" style="margin-top:10px;"></div>
+st.markdown("**Or use your current location:**")
+st.components.v1.html("""
 <script>
 function getLocation() {
-    document.getElementById("result").innerHTML = "<p style='color:gray'>📡 Getting your location...</p>";
+    var btn = document.getElementById("locbtn");
+    btn.innerText = "📡 Getting location...";
+    btn.disabled = true;
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             function(position) {
-                var lat = position.coords.latitude;
-                var lng = position.coords.longitude;
-                fetch("https://api.postcodes.io/postcodes?lon=" + lng + "&lat=" + lat)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.result && data.result.length > 0) {
-                            var pc = encodeURIComponent(data.result[0].postcode);
-                            var url = window.top.location.href.split('?')[0] + "?pc=" + pc;
-                            document.getElementById("result").innerHTML = 
-                                "<p style='color:green'>✅ Found your postcode! <a href='" + url + "' style='color:green;font-weight:bold;font-size:16px;text-decoration:underline;' target='_top'>Click here to search →</a></p>";
-                        }
-                    });
+                var lat = position.coords.latitude.toFixed(6);
+                var lng = position.coords.longitude.toFixed(6);
+                var base = window.top.location.href.split('?')[0];
+                window.top.location.href = base + "?lat=" + lat + "&lng=" + lng;
             },
-            function() {
-                document.getElementById("result").innerHTML = "<p style='color:red'>❌ Could not get location. Please enter postcode manually.</p>";
-            }
+            function(err) {
+                btn.innerText = "📍 Use My Current Location";
+                btn.disabled = false;
+                document.getElementById("err").innerText = "❌ Location denied. Please enter postcode manually.";
+            },
+            {enableHighAccuracy: true, timeout: 10000}
         );
+    } else {
+        document.getElementById("err").innerText = "❌ Location not supported on this browser.";
     }
 }
 </script>
-""", height=120)
+<button id="locbtn" onclick="getLocation()" style="background-color:#4CAF50;color:white;padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:bold;">
+    📍 Use My Current Location
+</button>
+<p id="err" style="color:red;margin-top:8px;font-size:14px;"></p>
+""", height=100)
 
 if postcode:
     geo = requests.get(f"https://api.postcodes.io/postcodes/{postcode}").json()
