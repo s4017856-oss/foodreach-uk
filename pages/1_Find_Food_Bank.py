@@ -48,6 +48,56 @@ with col1:
 with col2:
     radius = st.selectbox("Search radius (miles)", [5, 10, 15, 20], index=1)
 
+# Use My Location button using Streamlit HTML component
+st.markdown("**Or:**")
+location_data = st.components.v1.html("""
+    <button onclick="getLocation()" style="
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    ">
+        📍 Use My Current Location
+    </button>
+    <p id="status" style="color: gray; margin-top: 8px;"></p>
+
+    <script>
+    function getLocation() {
+        document.getElementById("status").innerText = "Getting your location...";
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    document.getElementById("status").innerText = 
+                        "✅ Location found! Lat: " + lat.toFixed(4) + ", Lng: " + lng.toFixed(4) + 
+                        " — Please copy your postcode below and paste it above.";
+                    
+                    // Fetch postcode from coordinates
+                    fetch("https://api.postcodes.io/postcodes?lon=" + lng + "&lat=" + lat)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.result && data.result.length > 0) {
+                                var pc = data.result[0].postcode;
+                                document.getElementById("status").innerHTML = 
+                                    "✅ Your postcode is: <strong>" + pc + "</strong> — Copy and paste it into the box above!";
+                            }
+                        });
+                },
+                function(error) {
+                    document.getElementById("status").innerText = "❌ Could not get location. Please enter postcode manually.";
+                }
+            );
+        } else {
+            document.getElementById("status").innerText = "❌ Location not supported by your browser.";
+        }
+    }
+    </script>
+""", height=100)
+
 if postcode:
     geo = requests.get(f"https://api.postcodes.io/postcodes/{postcode}").json()
 
@@ -127,4 +177,4 @@ if postcode:
         else:
             st.warning("No food banks found. Try increasing the search radius.")
     else:
-        st.error("❌ Postcode not found. Please check and try again.")
+        st.error("❌ Postcode not found. Please check and try again.")  
