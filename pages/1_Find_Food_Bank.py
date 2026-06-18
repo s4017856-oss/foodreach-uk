@@ -42,7 +42,7 @@ def load_all_foodbanks():
 with st.spinner("Loading food bank data..."):
     df_all = load_all_foodbanks()
 
-# Check if postcode came from location button
+# Read postcode from URL params
 params = st.query_params
 if "pc" in params:
     st.session_state["user_postcode"] = params["pc"].replace(" ", "")
@@ -55,47 +55,41 @@ with col1:
 with col2:
     radius = st.selectbox("Search radius (miles)", [5, 10, 15, 20], index=1)
 
+# Location button — shows postcode then user clicks a proper form button
 st.markdown("**Or:**")
-st.components.v1.html("""
-    <button onclick="getLocation()" style="
-        background-color: #4CAF50;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    ">
-        📍 Use My Current Location
-    </button>
-    <p id="status" style="color: gray; margin-top: 8px;"></p>
 
-    <script>
-    function getLocation() {
-        document.getElementById("status").innerText = "📡 Getting your location...";
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    fetch("https://api.postcodes.io/postcodes?lon=" + lng + "&lat=" + lat)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.result && data.result.length > 0) {
-                                var pc = data.result[0].postcode;
-                                document.getElementById("status").innerHTML = "✅ Your postcode is <strong>" + pc + "</strong>";
-                                window.top.location.href = window.top.location.href.split('?')[0] + "?pc=" + encodeURIComponent(pc);
-                            }
-                        });
-                },
-                function(error) {
-                    document.getElementById("status").innerText = "❌ Could not get location. Please enter postcode manually.";
-                }
-            );
-        }
+loc_result = st.components.v1.html("""
+<button onclick="getLocation()" style="background-color:#4CAF50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:16px;">
+    📍 Use My Current Location
+</button>
+<div id="result" style="margin-top:10px;"></div>
+<script>
+function getLocation() {
+    document.getElementById("result").innerHTML = "<p style='color:gray'>📡 Getting your location...</p>";
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                fetch("https://api.postcodes.io/postcodes?lon=" + lng + "&lat=" + lat)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.result && data.result.length > 0) {
+                            var pc = encodeURIComponent(data.result[0].postcode);
+                            var url = window.top.location.href.split('?')[0] + "?pc=" + pc;
+                            document.getElementById("result").innerHTML = 
+                                "<p style='color:green'>✅ Found your postcode! <a href='" + url + "' style='color:green;font-weight:bold;font-size:16px;text-decoration:underline;' target='_top'>Click here to search →</a></p>";
+                        }
+                    });
+            },
+            function() {
+                document.getElementById("result").innerHTML = "<p style='color:red'>❌ Could not get location. Please enter postcode manually.</p>";
+            }
+        );
     }
-    </script>
-""", height=100)
+}
+</script>
+""", height=120)
 
 if postcode:
     geo = requests.get(f"https://api.postcodes.io/postcodes/{postcode}").json()
@@ -136,7 +130,6 @@ if postcode:
                 f"{nearest['network']}"
             )
 
-            # Map
             m = folium.Map(location=[lat, lng], zoom_start=12)
             folium.Marker(
                 [lat, lng],
@@ -157,7 +150,6 @@ if postcode:
             st_folium(m, width=None, height=500, use_container_width=True)
             st.caption("🟢 Green = Trussell | 🔵 Blue = Independent")
 
-            # Table
             display_df = df_nearby[["name","address","postcode","network","distance_miles"]].copy()
             display_df["distance_miles"] = display_df["distance_miles"].round(1)
             display_df["referral_needed"] = display_df["network"].apply(
@@ -166,7 +158,6 @@ if postcode:
             display_df.columns = ["Name","Address","Postcode","Network","Distance (miles)","Referral Needed?"]
             st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-            # Save postcode to session for use in form
             st.session_state["user_postcode"] = postcode.upper()
 
             st.divider()
