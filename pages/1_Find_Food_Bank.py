@@ -42,15 +42,21 @@ def load_all_foodbanks():
 with st.spinner("Loading food bank data..."):
     df_all = load_all_foodbanks()
 
+# Check if postcode came from location button
+params = st.query_params
+if "pc" in params and not st.session_state.get("user_postcode"):
+    st.session_state["user_postcode"] = params["pc"]
+
 col1, col2 = st.columns([3, 1])
 with col1:
-    postcode = st.text_input("🔍 Enter your postcode", placeholder="e.g. HA1 1AA").strip().replace(" ", "")
+    postcode = st.text_input("🔍 Enter your postcode",
+                              value=st.session_state.get("user_postcode", ""),
+                              placeholder="e.g. HA1 1AA").strip().replace(" ", "")
 with col2:
     radius = st.selectbox("Search radius (miles)", [5, 10, 15, 20], index=1)
 
-# Use My Location button using Streamlit HTML component
 st.markdown("**Or:**")
-location_data = st.components.v1.html("""
+st.components.v1.html("""
     <button onclick="getLocation()" style="
         background-color: #4CAF50;
         color: white;
@@ -66,24 +72,19 @@ location_data = st.components.v1.html("""
 
     <script>
     function getLocation() {
-        document.getElementById("status").innerText = "Getting your location...";
+        document.getElementById("status").innerText = "📡 Getting your location...";
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     var lat = position.coords.latitude;
                     var lng = position.coords.longitude;
-                    document.getElementById("status").innerText = 
-                        "✅ Location found! Lat: " + lat.toFixed(4) + ", Lng: " + lng.toFixed(4) + 
-                        " — Please copy your postcode below and paste it above.";
-                    
-                    // Fetch postcode from coordinates
                     fetch("https://api.postcodes.io/postcodes?lon=" + lng + "&lat=" + lat)
                         .then(r => r.json())
                         .then(data => {
                             if (data.result && data.result.length > 0) {
                                 var pc = data.result[0].postcode;
-                                document.getElementById("status").innerHTML = 
-                                    "✅ Your postcode is: <strong>" + pc + "</strong> — Copy and paste it into the box above!";
+                                document.getElementById("status").innerText = "✅ Found: " + pc + " — Loading...";
+                                window.parent.location.href = window.parent.location.pathname + "?pc=" + encodeURIComponent(pc);
                             }
                         });
                 },
@@ -91,8 +92,6 @@ location_data = st.components.v1.html("""
                     document.getElementById("status").innerText = "❌ Could not get location. Please enter postcode manually.";
                 }
             );
-        } else {
-            document.getElementById("status").innerText = "❌ Location not supported by your browser.";
         }
     }
     </script>
